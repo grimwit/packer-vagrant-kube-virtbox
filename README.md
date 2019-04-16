@@ -1,1 +1,1 @@
-# packer-vagrant-kube-virtbox - test
+# packer-vagrant-kube-virtbox
