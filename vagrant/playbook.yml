@@ -1,0 +1,76 @@
+---
+- hosts: all
+  tasks:
+      - name: disable selinux
+        shell: setenforce 0 | sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
+
+      - name: disable swap
+        shell: swapoff -a | sed -i 's/\/dev\/mapper/#\/dev\/mapper/' /etc/fstab
+
+      - name: ensure pre-requisite packages installed
+        yum:
+          name: "{{ packages }}"
+        vars:
+          packages:
+          - yum-utils
+          - device-mapper-persistent-data
+          - lvm2
+
+      - name: create k8s.conf if it doesn't exist
+        file:
+          path: "/etc/sysctl.d/k8s.conf"
+          state: touch
+
+      - name: insert configuration block in /etc/sysctl.d/k8s.conf
+        blockinfile:
+          path: /etc/sysctl.d/k8s.conf
+          block: |
+            net.bridge.bridge-nf-call-ip6tables = 1
+            net.bridge.bridge-nf-call-iptables = 1
+
+      - name: sysctl
+        shell: sysctl -p
+
+      - name: Add Docker repository
+        yum_repository:
+          name: docker-ce
+          description: docker-ce YUM repo
+          baseurl: https://download.docker.com/linux/centos/7/x86_64/stable
+          gpgkey: https://download.docker.com/linux/centos/gpg
+
+      - name: ensure docker-ce installed
+        yum:
+          name: docker-ce-18.06.2.ce-3.el7.x86_64
+
+      - name: Make sure docker service is running
+        systemd:
+          state: started
+          enabled: yes
+          name: docker
+
+      - name: Add Kubernetes repository
+        yum_repository:
+          name: kubernetes
+          description: kubernetes YUM repo
+          baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+          gpgkey:
+            - https://packages.cloud.google.com/yum/doc/yum-key.gpg
+            - https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+
+      - name: ensure pre-requisite packages installed
+        yum:
+          name: "{{ kubepackages }}"
+        vars:
+          kubepackages:
+          - kubelet
+          - kubeadm
+          - kubectl
+
+      - name: cgroup changes
+        shell: sed -i 's/cgroup-driver=systemd/cgroup-driver=cgroupfs/g' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+      - name: Make sure kubelet service is running
+        systemd:
+          state: started
+          enabled: yes
+          name: kubelet
