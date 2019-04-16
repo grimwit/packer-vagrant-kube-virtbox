@@ -1,0 +1,55 @@
+{
+  "builders": [
+    {
+      "type": "virtualbox-iso",
+      "virtualbox_version_file": ".vbox_version",
+      "guest_os_type": "RedHat_64",
+      "headless": true,
+      "iso_url": "Z:\\iso\\CentOS-7-x86_64-Minimal-1810.iso",
+      "iso_checksum": "38d5d51d9d100fd73df031ffd6bd8b1297ce24660dc8c13a3b8b4534a4bd291c",
+      "iso_checksum_type": "sha256",
+      "ssh_username": "vagrant",
+      "ssh_password": "vagrant",
+      "ssh_wait_timeout": "600s",
+      "vm_name": "centos7-min",
+      "boot_wait": "10s",
+      "boot_command": [
+      "<esc>",
+      "<wait>linux inst.ks=hd:/dev/fd0:kick-start.cfg<enter>"
+      ],
+      "vboxmanage": [
+        [ "modifyvm", "{{.Name}}", "--memory", "2048" ],
+        [ "modifyvm", "{{.Name}}", "--cpus", "2" ],
+        [ "modifyvm", "{{.Name}}", "--usb", "off" ],
+        [ "modifyvm", "{{.Name}}", "--audio", "none" ]
+      ],
+      "floppy_files": [
+      "ks.cfg"
+    ],
+    "shutdown_command": "echo 'vagrant' | sudo -S shutdown -P now"
+    }
+  ],
+  "provisioners": [
+      {
+           "type": "shell",
+           "execute_command": "echo 'vagrant' | sudo -S bash '{{.Path}}'",
+           "override": {
+                "virtualbox-iso": {
+                     "scripts": [
+                          "virtualbox.sh"
+                     ]
+                }
+           }
+      }
+  ],
+  "post-processors": [
+      {
+           "type": "vagrant",
+           "override": {
+                "virtualbox": {
+                    "output": "centos-7-6-x64-virtualbox.box"
+                }
+           }
+      }
+    ]
+  }
